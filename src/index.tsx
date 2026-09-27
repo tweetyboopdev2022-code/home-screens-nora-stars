@@ -35,18 +35,32 @@ export default function Stars({ config, style, timezone: tz }: PluginComponentPr
       const p = (pj.results ?? pj).find((x: any) => String(x.name).toLowerCase() === projectName.toLowerCase());
       if (!p) { setErr(`No Todoist project “${projectName}”`); return; }
       const since = new Date(now.getTime() - 30 * 86400000);
-      const j = await call(`${API}/tasks/completed/by_completion_date?since=${encodeURIComponent(since.toISOString())}&until=${encodeURIComponent(new Date().toISOString())}&project_id=${p.id}&limit=200`);
-      const items: any[] = j.items ?? j.results ?? [];
+      // Repeating chores never show as "completed" tasks (Todoist just moves the due date),
+      // so count completion events from the activity log; fall back to completed tasks.
+      let times: number[] = [];
+      try {
+        let cursor = ''; 
+        for (let page = 0; page < 5; page++) {
+          const a = await call(`${API}/activities?object_type=item&event_type=completed&parent_project_id=${p.id}&date_from=${encodeURIComponent(since.toISOString())}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+          times.push(...(a.results ?? a.events ?? []).map((e: any) => new Date(e.event_date).getTime()));
+          cursor = a.next_cursor; if (!cursor) break;
+        }
+      } catch { times = []; }
+      if (!times.length) {
+        const j = await call(`${API}/tasks/completed/by_completion_date?since=${encodeURIComponent(since.toISOString())}&until=${encodeURIComponent(new Date().toISOString())}&project_id=${p.id}&limit=200`);
+        times = (j.items ?? j.results ?? []).map((i: any) => new Date(i.completed_at).getTime());
+      }
+      times = times.filter((t) => Number.isFinite(t) && t >= since.getTime());
       const ws = weekStartDate(now, Number(config.weekStart ?? 1)).getTime();
-      const days = new Set(items.map((i) => dayKey(new Date(i.completed_at), tz)));
-      setWeek(items.filter((i) => new Date(i.completed_at).getTime() >= ws).length);
-      setTodayN(items.filter((i) => dayKey(new Date(i.completed_at), tz) === dayKey(now, tz)).length);
+      const days = new Set(times.map((t) => dayKey(new Date(t), tz)));
+      setWeek(times.filter((t) => t >= ws).length);
+      setTodayN(times.filter((t) => dayKey(new Date(t), tz) === dayKey(now, tz)).length);
       setSt(streak(days, now, tz)); setErr(null);
     } catch (e) { setErr(/HTTP (401|403|500)/.test(String((e as Error).message)) ? 'Add your Todoist API token in Plugins → nora-stars.' : 'Can’t reach Todoist right now.'); }
   })(); }, [tick, projectName]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const n = week ?? 0; const left = Math.max(0, goal - n);
-  const cols = Math.min(goal, 10);
+  const cols = Math.min(goal, goal > 10 ? Math.ceil(goal / 3) : goal);
   return (
     <div style={frame(style)}>
       <Header style={style} title={`${name}'s stars`} meta={week == null ? '' : `${n} this week`} />
