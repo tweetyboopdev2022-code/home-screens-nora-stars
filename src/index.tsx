@@ -36,12 +36,13 @@ export default function Stars({ config, style, timezone: tz }: PluginComponentPr
       if (!p) { setErr(`No Todoist project “${projectName}”`); return; }
       const since = new Date(now.getTime() - 30 * 86400000);
       // Repeating chores never show as "completed" tasks (Todoist just moves the due date),
-      // so count completion events from the activity log; fall back to completed tasks.
+      // so count completion events from the activity log (no date_from: the free plan refuses
+      // ranges older than its ~1 week history); fall back to completed tasks.
       let times: number[] = [];
       try {
         let cursor = ''; 
         for (let page = 0; page < 5; page++) {
-          const a = await call(`${API}/activities?object_type=item&event_type=completed&parent_project_id=${p.id}&date_from=${encodeURIComponent(since.toISOString())}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+          const a = await call(`${API}/activities?object_type=item&event_type=completed&parent_project_id=${p.id}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
           times.push(...(a.results ?? a.events ?? []).map((e: any) => new Date(e.event_date).getTime()));
           cursor = a.next_cursor; if (!cursor) break;
         }
