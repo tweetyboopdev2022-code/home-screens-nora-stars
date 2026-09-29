@@ -1,7 +1,7 @@
 {
   "id": "nora-stars",
   "name": "Stars",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Stars for jobs ticked off in a Todoist project this week, a daily streak, and a goal/reward.",
   "author": "Tanya",
   "license": "MIT",
@@ -87,7 +87,7 @@
     {
       "key": "todoist_token",
       "label": "Todoist API token",
-      "description": "Todoist \u2192 Settings \u2192 Integrations \u2192 Developer \u2192 API token.",
+      "description": "Todoist → Settings → Integrations → Developer → API token.",
       "required": true,
       "placeholder": "Your Todoist API token"
     }
