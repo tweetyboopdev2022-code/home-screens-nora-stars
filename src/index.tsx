@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PluginComponentProps } from './hs-plugin';
-import { frame, ink, Header, Icon, I, sdk, dayKey, useNow } from './ui';
+import { frame, ink, Header, Icon, I, sdk, dayKey, useNow, Fit, useBox } from './ui';
 
 const API = 'https://api.todoist.com/api/v1';
 const AUTH = { header: { Authorization: 'Bearer {{todoist_token}}' } };
@@ -62,33 +62,38 @@ export default function Stars({ config, style, timezone: tz }: PluginComponentPr
 
   const n = week ?? 0; const left = Math.max(0, goal - n);
   const cols = Math.min(goal, goal > 10 ? Math.ceil(goal / 3) : goal);
+  const [box, size] = useBox<HTMLDivElement>();
+  const fs = Number(style?.fontSize) || 18;
+  const narrow = size.w > 0 && size.w < fs * 22;
+  const stat = (icon: React.ReactNode, v: number, label: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45em' }}>
+      {icon}
+      <div><div style={{ fontSize: '1.5em', fontWeight: 600, lineHeight: 1 }}>{v}</div><div style={{ fontSize: '0.62em', opacity: 0.5, whiteSpace: 'nowrap' }}>{label}</div></div>
+    </div>
+  );
   return (
-    <div style={frame(style)}>
+    <div ref={box} style={frame(style)}>
       <Header style={style} title={`${name}'s stars`} meta={week == null ? '' : `${n} this week`} />
       {err ? <div style={{ margin: 'auto', fontSize: '0.8em', opacity: 0.6 }}>{err}</div> : (
-        <div style={{ display: 'flex', gap: '1.2em', alignItems: 'center', flex: 1, minHeight: 0 }}>
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '0.35em' }}>
-            {Array.from({ length: goal }, (_, i) => (
-              <Icon key={i} d={I.star} size="100%" stroke={1.5} fill={i < n ? accent : 'none'} style={{ color: i < n ? accent : ink(style, 0.25), maxWidth: '2.2em', aspectRatio: '1' }} />
-            ))}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6em', minWidth: '9em' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45em' }}>
-              <Icon d={I.flame} size="1.6em" stroke={1.6} style={{ color: st ? '#ea580c' : ink(style, 0.3) }} />
-              <div><div style={{ fontSize: '1.5em', fontWeight: 600, lineHeight: 1 }}>{st}</div><div style={{ fontSize: '0.62em', opacity: 0.5 }}>day streak</div></div>
+        <Fit max={2.2} min={0.5}>
+          <div style={{ display: 'flex', flexDirection: narrow ? 'column' : 'row', gap: narrow ? '0.8em' : '1.2em', alignItems: 'center' }}>
+            <div style={{ flex: narrow ? undefined : 1, width: narrow ? '100%' : undefined, display: 'grid', gridTemplateColumns: `repeat(${narrow ? Math.min(goal, 5) : size.h < size.w * 0.55 ? Math.ceil(goal / 2) : cols}, 1fr)`, gap: '0.35em', justifyItems: 'center' }}>
+              {Array.from({ length: goal }, (_, i) => (
+                <Icon key={i} d={I.star} size="100%" stroke={1.5} fill={i < n ? accent : 'none'} style={{ color: i < n ? accent : ink(style, 0.25), maxWidth: '2.2em', aspectRatio: '1' }} />
+              ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45em' }}>
-              <Icon d={I.check} size="1.6em" stroke={2} style={{ color: todayN ? accent : ink(style, 0.3) }} />
-              <div><div style={{ fontSize: '1.5em', fontWeight: 600, lineHeight: 1 }}>{todayN}</div><div style={{ fontSize: '0.62em', opacity: 0.5 }}>done today</div></div>
+            <div style={{ display: 'flex', flexDirection: narrow ? 'row' : 'column', gap: narrow ? '1.4em' : '0.6em', minWidth: narrow ? undefined : '6em' }}>
+              {stat(<Icon d={I.flame} size="1.6em" stroke={1.6} style={{ color: st ? '#ea580c' : ink(style, 0.3) }} />, st, 'day streak')}
+              {stat(<Icon d={I.check} size="1.6em" stroke={2} style={{ color: todayN ? accent : ink(style, 0.3) }} />, todayN, 'done today')}
             </div>
           </div>
-        </div>
-      )}
-      {!err && reward && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginTop: '0.7em', padding: '0.5em 0.8em', borderRadius: '0.6em', background: `color-mix(in srgb, ${accent} 12%, transparent)`, fontSize: '0.85em' }}>
-          <Icon d={I.gift} size="1.2em" style={{ color: accent }} />
-          <span>{left === 0 ? <><b style={{ fontWeight: 600 }}>Goal reached!</b> {reward} time 🎉</> : <><b style={{ fontWeight: 600 }}>{left} more star{left === 1 ? '' : 's'}</b> to {reward}</>}</span>
-        </div>
+          {reward && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginTop: '0.8em', padding: '0.5em 0.8em', borderRadius: '0.6em', background: `color-mix(in srgb, ${accent} 12%, transparent)`, fontSize: '0.85em' }}>
+              <Icon d={I.gift} size="1.2em" style={{ color: accent, flexShrink: 0 }} />
+              <span>{left === 0 ? <><b style={{ fontWeight: 600 }}>Goal reached!</b> {reward} time 🎉</> : <><b style={{ fontWeight: 600 }}>{left} more star{left === 1 ? '' : 's'}</b> to {reward}</>}</span>
+            </div>
+          )}
+        </Fit>
       )}
     </div>
   );
