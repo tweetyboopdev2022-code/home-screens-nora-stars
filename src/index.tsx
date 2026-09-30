@@ -24,6 +24,7 @@ export function useStars(config: Record<string, unknown>, tz: string | undefined
   const [week, setWeek] = React.useState<number | null>(null);
   const [todayN, setTodayN] = React.useState(0);
   const [st, setSt] = React.useState(0);
+  const [doneToday, setDoneToday] = React.useState<Set<string>>(new Set());
   const [err, setErr] = React.useState<string | null>(null);
   const tick = Math.floor(now.getTime() / 300000);
   const [bump, setBump] = React.useState(0);
@@ -38,29 +39,34 @@ export function useStars(config: Record<string, unknown>, tz: string | undefined
       // Repeating chores never show as "completed" tasks (Todoist just moves the due date),
       // so count completion events from the activity log (no date_from: the free plan refuses
       // ranges older than its ~1 week history); fall back to completed tasks.
-      let times: number[] = [];
+      let times: number[] = []; const done: { id: string; t: number }[] = [];
       try {
         let cursor = ''; 
         for (let page = 0; page < 5; page++) {
           const a = await call(`${API}/activities?object_type=item&event_type=completed&parent_project_id=${p.id}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, bump > 0);
-          times.push(...(a.results ?? a.events ?? []).map((e: any) => new Date(e.event_date).getTime()));
+          const evs = a.results ?? a.events ?? [];
+          times.push(...evs.map((e: any) => new Date(e.event_date).getTime()));
+          done.push(...evs.map((e: any) => ({ id: String(e.object_id ?? e.task_id ?? ''), t: new Date(e.event_date).getTime() })));
           cursor = a.next_cursor; if (!cursor) break;
         }
       } catch { times = []; }
       if (!times.length) {
         const j = await call(`${API}/tasks/completed/by_completion_date?since=${encodeURIComponent(since.toISOString())}&until=${encodeURIComponent(new Date().toISOString())}&project_id=${p.id}&limit=200`);
-        times = (j.items ?? j.results ?? []).map((i: any) => new Date(i.completed_at).getTime());
+        const items = j.items ?? j.results ?? [];
+        times = items.map((i: any) => new Date(i.completed_at).getTime());
+        done.push(...items.map((i: any) => ({ id: String(i.task_id ?? i.id ?? ''), t: new Date(i.completed_at).getTime() })));
       }
       times = times.filter((t) => Number.isFinite(t) && t >= since.getTime());
       const ws = weekStartDate(now, Number(config.weekStart ?? 1)).getTime();
       const days = new Set(times.map((t) => dayKey(new Date(t), tz)));
+      setDoneToday(new Set(done.filter((d) => d.id && dayKey(new Date(d.t), tz) === dayKey(now, tz)).map((d) => d.id)));
       setWeek(times.filter((t) => t >= ws).length);
       setTodayN(times.filter((t) => dayKey(new Date(t), tz) === dayKey(now, tz)).length);
       setSt(streak(days, now, tz)); setErr(null);
     } catch (e) { setErr(/HTTP (401|403|500)/.test(String((e as Error).message)) ? 'Add your Todoist API token in Plugins → nora-stars.' : 'Can’t reach Todoist right now.'); }
   })(); }, [tick, projectName, bump]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { week, todayN, st, err, setWeek, setTodayN };
+  return { week, todayN, st, err, setWeek, setTodayN, doneToday };
 }
 
 export function StarsView({ config, style, timezone: tz }: PluginComponentProps) {
@@ -133,7 +139,7 @@ function Routine({ config, style, timezone: tz, stars }: PluginComponentProps & 
 
   const auto = bucketNow(hour, Number(config.morningUntil ?? 11), Number(config.bedtimeFrom ?? 17));
   const cur: Bucket = pick && Date.now() - pick.at < 120000 ? pick.b : auto;
-  const list = (tasks ?? []).map((t) => ({ ...t, b: bucketOf(t.content, t.sectionName), ok: done.has(t.id) || isDone(t.due, today) }))
+  const list = (tasks ?? []).map((t) => ({ ...t, b: bucketOf(t.content, t.sectionName), ok: done.has(t.id) || stars.doneToday.has(t.id) }))
     .filter((t) => !t.due?.date || t.due.date <= today || t.ok);
   const count = (b: Bucket) => { const l = list.filter((t) => t.b === b); return { left: l.filter((t) => !t.ok).length, all: l.length }; };
   const rows = list.filter((t) => t.b === cur).sort((a, b) => Number(a.ok) - Number(b.ok));
