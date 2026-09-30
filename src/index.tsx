@@ -182,6 +182,7 @@ function Routine({ config, style, timezone: tz, stars }: PluginComponentProps & 
             </span>
           </button>
         ))}
+        {allDone && <div style={{ gridColumn: '1 / -1', alignSelf: 'center', textAlign: 'center', fontSize: '0.95em', fontWeight: 500, opacity: 0.75 }}>All done — great job, {name}! 🎉</div>}
       </div>
       {config.view !== 'routine' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8em', padding: '0.7em 0.9em', borderRadius: '0.9em', background: `color-mix(in srgb, ${accent} 10%, transparent)`, fontSize: '1.15em' }}>
@@ -195,7 +196,6 @@ function Routine({ config, style, timezone: tz, stars }: PluginComponentProps & 
         </div>
       )}
       {burst > 0 && <div key={burst} style={{ position: 'absolute', right: '1.2em', top: '2.6em', fontSize: '1.4em', fontWeight: 700, color: accent, pointerEvents: 'none', animation: 'nsPop 1.3s ease-out forwards' }}>+1 ⭐</div>}
-      {allDone && <div style={{ position: 'absolute', left: 0, right: 0, top: '2.8em', textAlign: 'center', fontSize: '0.8em', opacity: 0.7, pointerEvents: 'none' }}>All done — great job, {name}! 🎉</div>}
       {toast && <div style={{ position: 'absolute', left: '50%', bottom: '1em', transform: 'translateX(-50%)', padding: '0.45em 0.9em', borderRadius: '999px', background: '#1c1917', color: '#fff', fontSize: '0.65em' }}>{toast}</div>}
       <style>{'@keyframes nsPop{0%{opacity:0;transform:translateY(0.4em) scale(.8)}20%{opacity:1;transform:translateY(0) scale(1.1)}100%{opacity:0;transform:translateY(-1.6em) scale(1)}}'}</style>
     </div>
