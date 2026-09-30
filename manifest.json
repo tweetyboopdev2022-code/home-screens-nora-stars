@@ -1,8 +1,8 @@
 {
   "id": "nora-stars",
   "name": "Stars",
-  "version": "1.2.1",
-  "description": "Stars for jobs ticked off in a Todoist project this week, a daily streak, and a goal/reward.",
+  "version": "1.3.0",
+  "description": "Stars for jobs ticked off in a Todoist project this week, a daily streak and a goal/reward \u2014 or a kid routine view (Morning / After school / Bedtime) where each tick earns a star.",
   "author": "Tanya",
   "license": "MIT",
   "minAppVersion": "1.7.1",
@@ -15,7 +15,10 @@
     "weeklyGoal": 15,
     "reward": "Movie night",
     "weekStart": 1,
-    "accentColor": "#db2777"
+    "accentColor": "#db2777",
+    "view": "stars",
+    "morningUntil": 11,
+    "bedtimeFrom": 17
   },
   "defaultSize": {
     "w": 1000,
@@ -29,6 +32,22 @@
   "configSchema": {
     "type": "object",
     "properties": {
+      "view": {
+        "type": "string",
+        "title": "View",
+        "enum": [
+          "stars",
+          "routine",
+          "both"
+        ],
+        "enumLabels": [
+          "Stars",
+          "Routine",
+          "Routine + stars"
+        ],
+        "ui:widget": "select",
+        "ui:group": "Content"
+      },
       "name": {
         "type": "string",
         "title": "Whose stars",
@@ -70,6 +89,24 @@
         "title": "Accent colour",
         "ui:widget": "color",
         "ui:group": "Look"
+      },
+      "morningUntil": {
+        "type": "number",
+        "title": "Morning routine until (hour)",
+        "minimum": 8,
+        "maximum": 13,
+        "ui:widget": "slider",
+        "ui:step": 1,
+        "ui:group": "Routine"
+      },
+      "bedtimeFrom": {
+        "type": "number",
+        "title": "Bedtime routine from (hour)",
+        "minimum": 15,
+        "maximum": 21,
+        "ui:widget": "slider",
+        "ui:step": 1,
+        "ui:group": "Routine"
       }
     }
   },
@@ -87,7 +124,7 @@
     {
       "key": "todoist_token",
       "label": "Todoist API token",
-      "description": "Todoist → Settings → Integrations → Developer → API token.",
+      "description": "Todoist \u2192 Settings \u2192 Integrations \u2192 Developer \u2192 API token.",
       "required": true,
       "placeholder": "Your Todoist API token"
     }
